@@ -50,7 +50,7 @@ class SeoMeta extends Field
             'follow_type_options' => config('seo.follow_type_options'),
             'available_locales'=>config('seo.available_locales')
         ]);
-        $this->hideWhenCreating();
+        // $this->hideWhenCreating();
     }
 
     /**
@@ -134,53 +134,55 @@ class SeoMeta extends Field
      * @return void
      */
     protected function fillAttributeFromRequest(NovaRequest $request,
-                                                $requestAttribute,
-                                                $model,
-                                                $attribute)
+                                                            $requestAttribute,
+                                                            $model,
+                                                            $attribute)
     {
+        $first = $model->save();
+//        dd($model->id);
         $has_change = false;
         $relationship = $model->{$attribute} ?? new SeoMetaItem;
-        if($model->id){
-            if(!$relationship->seo_metaable_type){
-                $relationship->seo_metaable_type = get_class($model);
-                $relationship->seo_metaable_id = $model->id;
-                $has_change = true;
-            }
-            if ($request->exists($requestAttribute) && is_string($request[$requestAttribute])) {
-                $value = json_decode($request[$requestAttribute]);
+        // if($model->id){
+        if(!$relationship->seo_metaable_type){
+            $relationship->seo_metaable_type = get_class($model);
+            $relationship->seo_metaable_id = $model->id;
+            $has_change = true;
+        }
+        if ($request->exists($requestAttribute) && is_string($request[$requestAttribute])) {
+            $value = json_decode($request[$requestAttribute]);
 
-                $relationship->fill([
-                    'title'       => $value->title ?? null,
-                    'description' => $value->description ?? null,
-                    'keywords'    => $value->keywords ?? null,
-                    'follow_type' => $value->follow_type ?? null,
-                    'params' => [
-                        'title_format' => $model->getSeoTitleFormatter()
-                    ]
-                ]);
-                $has_change = true;
-            }
+            $relationship->fill([
+                'title'       => $value->title ?? null,
+                'description' => $value->description ?? null,
+                'keywords'    => $value->keywords ?? null,
+                'follow_type' => $value->follow_type ?? null,
+                'params' => [
+                    'title_format' => $model->getSeoTitleFormatter()
+                ]
+            ]);
+            $has_change = true;
+        }
 
-            $file_attr = $requestAttribute.'_image';
-            if ($request->hasFile($file_attr) && $request->file($file_attr)->isValid()) {
-                $image = $request->{$file_attr};
+        $file_attr = $requestAttribute.'_image';
+        if ($request->hasFile($file_attr) && $request->file($file_attr)->isValid()) {
+            $image = $request->{$file_attr};
 
-                // Save the SEO image
-                $path = $request->{$file_attr}->store($this->file_path, ['disk' => $this->file_disk]);
-                if ($path) {
-                    // Delete old file if any.
-                    if ($relationship->image) {
-                        Storage::disk($this->file_disk)->delete($relationship->image);
-                    }
-
-                    $relationship->image = $path;
-                    $has_change = true;
+            // Save the SEO image
+            $path = $request->{$file_attr}->store($this->file_path, ['disk' => $this->file_disk]);
+            if ($path) {
+                // Delete old file if any.
+                if ($relationship->image) {
+                    Storage::disk($this->file_disk)->delete($relationship->image);
                 }
-            }
 
-            if($has_change){
-                $relationship->save();
+                $relationship->image = $path;
+                $has_change = true;
             }
         }
+
+        if($has_change){
+            $relationship->save();
+        }
+        //     }
     }
 }
